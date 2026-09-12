@@ -1,31 +1,18 @@
 <?php
+session_start();
+include 'db.php';
 
-include "db.php";
-
-if (!isset($_GET['id'])) {
-    die("Post ID is missing.");
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    die("Access denied. Only admins can delete posts.");
 }
 
-$id = intval($_GET['id']);
-
-$sql = "DELETE FROM posts WHERE id = ?";
-
-$stmt = mysqli_prepare($conn, $sql);
-
-if (!$stmt) {
-    die("Prepare failed: " . mysqli_error($conn));
+if (isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
+    $stmt = $conn->prepare("DELETE FROM posts WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
 }
 
-mysqli_stmt_bind_param($stmt, "i", $id);
-
-if (mysqli_stmt_execute($stmt)) {
-    echo "Post deleted successfully!<br><br>";
-    echo '<a href="read.php">View All Posts</a>';
-} else {
-    echo "Delete failed: " . mysqli_error($conn);
-}
-
-mysqli_stmt_close($stmt);
-mysqli_close($conn);
-
+header("Location: read.php");
+exit();
 ?>
