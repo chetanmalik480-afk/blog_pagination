@@ -1,56 +1,49 @@
 <?php
+session_start();
+include 'db.php';
+$error = "";
 
-include "db.php";
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
 
-if (isset($_POST['submit'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $title   = trim($_POST['title']);
+    $content = trim($_POST['content']);
 
-    $title = $_POST['title'];
-    $content = $_POST['content'];
-
-    $sql = "INSERT INTO posts (title, content) VALUES (?, ?)";
-
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "ss", $title, $content);
-
-    if (mysqli_stmt_execute($stmt)) {
-        echo "Post created successfully!";
-        echo "<br><br>";
-        echo '<a href="read.php">View Posts</a>';
+    if (empty($title) || empty($content)) {
+        $error = "Title and content cannot be empty.";
     } else {
-        echo "Error: " . mysqli_error($conn);
+        $stmt = $conn->prepare("INSERT INTO posts (title, content, created_at) VALUES (?, ?, NOW())");
+        $stmt->bind_param("ss", $title, $content);
+        $stmt->execute();
+        header("Location: read.php");
+        exit();
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Create Post</title>
+    <title>Add Post</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-
 <body>
-
-<h1>Create New Post</h1>
-
-<form method="POST">
-
-    <label>Title:</label><br>
-    <input type="text" name="title" required>
-
-    <br><br>
-
-    <label>Content:</label><br>
-    <textarea name="content" rows="8" cols="50" required></textarea>
-
-    <br><br>
-
-    <button type="submit" name="submit">Create Post</button>
-
-</form>
-
-<br>
-
-<a href="read.php">View All Posts</a>
-
+<div class="container mt-5" style="max-width:500px;">
+    <h2>Add New Post</h2>
+    <?php if ($error): ?><div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+    <form method="POST">
+        <div class="mb-3">
+            <label>Title</label>
+            <input type="text" name="title" class="form-control" required minlength="3">
+        </div>
+        <div class="mb-3">
+            <label>Content</label>
+            <textarea name="content" class="form-control" required minlength="10"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Add Post</button>
+    </form>
+</div>
 </body>
 </html>
