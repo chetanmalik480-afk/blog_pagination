@@ -1,103 +1,66 @@
 <?php
+session_start();
+include 'db.php';
+$error = "";
 
-include "db.php";
-
-if (!isset($_GET['id'])) {
-    die("Post ID is missing.");
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
 }
 
-$id = intval($_GET['id']);
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Get existing post
-$sql = "SELECT id, title, content FROM posts WHERE id = ?";
-$stmt = mysqli_prepare($conn, $sql);
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $title   = trim($_POST['title']);
+    $content = trim($_POST['content']);
+    $id      = (int)$_POST['id'];
 
-if (!$stmt) {
-    die("Prepare failed: " . mysqli_error($conn));
+    if (empty($title) || empty($content)) {
+        $error = "Title and content cannot be empty.";
+    } else {
+        $stmt = $conn->prepare("UPDATE posts SET title = ?, content = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $title, $content, $id);
+        $stmt->execute();
+        header("Location: read.php");
+        exit();
+    }
 }
 
-mysqli_stmt_bind_param($stmt, "i", $id);
-mysqli_stmt_execute($stmt);
-
-$result = mysqli_stmt_get_result($stmt);
-
-if (!$result) {
-    die("Query failed: " . mysqli_error($conn));
-}
-
-$post = mysqli_fetch_assoc($result);
+// Fetch existing post to pre-fill the form
+$stmt = $conn->prepare("SELECT * FROM posts WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
+$post = $result->fetch_assoc();
 
 if (!$post) {
     die("Post not found.");
 }
-
-
-// Update post
-if (isset($_POST['update'])) {
-
-    $title = $_POST['title'];
-    $content = $_POST['content'];
-
-    $sql = "UPDATE posts SET title = ?, content = ? WHERE id = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-
-    if (!$stmt) {
-        die("Prepare failed: " . mysqli_error($conn));
-    }
-
-    mysqli_stmt_bind_param($stmt, "ssi", $title, $content, $id);
-
-    if (mysqli_stmt_execute($stmt)) {
-        echo "Post updated successfully!<br><br>";
-        echo '<a href="read.php">View Posts</a>';
-        exit;
-    } else {
-        echo "Update failed: " . mysqli_error($conn);
-    }
-}
-
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Update Post</title>
+    <title>Edit Post</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-
 <body>
-
-<h1>Update Post</h1>
-
-<form method="POST">
-
-    <label>Title:</label><br>
-    <input 
-        type="text" 
-        name="title" 
-        value="<?php echo htmlspecialchars($post['title']); ?>"
-        required
-    >
-
-    <br><br>
-
-    <label>Content:</label><br>
-
-    <textarea 
-        name="content" 
-        rows="8" 
-        cols="50"
-        required
-    ><?php echo htmlspecialchars($post['content']); ?></textarea>
-
-    <br><br>
-
-    <button type="submit" name="update">Update Post</button>
-
-</form>
-
-<br>
-
-<a href="read.php">View All Posts</a>
-
+<div class="container mt-5" style="max-width:500px;">
+    <h2>Edit Post</h2>
+    <?php if ($error): ?><div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+    <form method="POST">
+        <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
+        <div class="mb-3">
+            <label>Title</label>
+            <input type="text" name="title" class="form-control" required minlength="3"
+                   value="<?php echo htmlspecialchars($post['title']); ?>">
+        </div>
+        <div class="mb-3">
+            <label>Content</label>
+            <textarea name="content" class="form-control" required minlength="10"><?php echo htmlspecialchars($post['content']); ?></textarea>
+        </div>
+        <button type="submit" class="btn btn-warning">Update Post</button>
+    </form>
+</div>
 </body>
 </html>
