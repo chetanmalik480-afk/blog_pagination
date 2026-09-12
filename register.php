@@ -1,23 +1,52 @@
 <?php
-include(__DIR__ . "/db.php");
+include 'db.php';
+$error = "";
 
-if (isset($_POST['register'])) {
-    $username = $_POST['username'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
-    $sql = "INSERT INTO users (username, password) VALUES ('$username', '$password')";
-
-    if (mysqli_query($conn, $sql)) {
-        echo "Registered successfully! <a href='login.php'>Login here</a>";
+    if (empty($username) || empty($password)) {
+        $error = "Username and password are required.";
+    } elseif (strlen($password) < 6) {
+        $error = "Password must be at least 6 characters.";
     } else {
-        echo "Error: " . mysqli_error($conn);
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $role = 'editor';
+
+        $stmt = $conn->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $username, $hashed, $role);
+
+        if ($stmt->execute()) {
+            header("Location: login.php");
+            exit();
+        } else {
+            $error = "Username already taken.";
+        }
     }
 }
 ?>
-
-<form method="POST">
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5" style="max-width:400px;">
     <h2>Register</h2>
-    Username: <input type="text" name="username" required><br><br>
-    Password: <input type="password" name="password" required><br><br>
-    <button name="register">Register</button>
-</form>
+    <?php if ($error): ?><div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+    <form method="POST">
+        <div class="mb-3">
+            <label>Username</label>
+            <input type="text" name="username" class="form-control" required minlength="3">
+        </div>
+        <div class="mb-3">
+            <label>Password</label>
+            <input type="password" name="password" class="form-control" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn-primary">Register</button>
+    </form>
+</div>
+</body>
+</html>
