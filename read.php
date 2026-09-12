@@ -1,4 +1,5 @@
 <?php
+session_start();
 include 'db.php';
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -27,6 +28,20 @@ $totalPages  = max(1, ceil($totalRows / $limit));
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+<div class="container mt-3">
+    <nav class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="m-0">My Blog</h4>
+        <div>
+            <?php if (isset($_SESSION['username'])): ?>
+                <span class="me-2">Logged in as <?php echo htmlspecialchars($_SESSION['username']); ?> (<?php echo $_SESSION['role']; ?>)</span>
+                <a href="logout.php" class="btn btn-sm btn-outline-danger">Logout</a>
+            <?php else: ?>
+                <a href="login.php" class="btn btn-sm btn-outline-primary">Login</a>
+                <a href="register.php" class="btn btn-sm btn-outline-secondary">Register</a>
+            <?php endif; ?>
+        </div>
+    </nav>
+</div>
 <div class="container mt-4">
     <h2 class="mb-3">Blog Posts</h2>
     <a href="create.php" class="btn btn-success mb-3">Add New Post</a>
